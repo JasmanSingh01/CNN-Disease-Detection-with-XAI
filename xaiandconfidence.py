@@ -102,11 +102,11 @@ def classify_image(image):
         confidence_score = probabilities[index]  # Get the confidence score of the predicted class
 
         # Update the result label with the predicted class name
-        result_label.config(text=f"Predicted Disease: {disease_name}", fg="#4CAF50")
+        result_label.config(text=f"Predicted Disease: {disease_name}", fg="#ffffff")
 
         # Check if the confidence score is greater than 0.98
         if confidence_score > 0.98:
-            confidence_label.config(text=f"Confidence Score: {confidence_score:.4f}", fg="#FF5722")
+            confidence_label.config(text=f"Confidence Score: {confidence_score:.4f}", fg="#000000")
             confidence_label.pack()
             result_label.pack()  # Display the Predicted Class label
         else:
@@ -124,10 +124,10 @@ def classify_image(image):
 def show_disease_info(disease_name):
     info = disease_info.get(disease_name, None)
     if info:
-        description_label.config(text=f"Description: {info['description']}", fg="#FF5722")
-        precautions_label.config(text=f"Precautions: {info['precautions']}", fg="#FF5722")
-        medications_label.config(text=f"Medications: {info['medications']}", fg="#FF5722")
-        diet_label.config(text=f"Diet: {info['diet']}", fg="#FF5722")
+        description_label.config(text=f"Description: {info['description']}", fg="#ffffff")
+        precautions_label.config(text=f"Precautions: {info['precautions']}", fg="#ffffff")
+        medications_label.config(text=f"Medications: {info['medications']}", fg="#ffffff")
+        diet_label.config(text=f"Diet: {info['diet']}", fg="#ffffff")
         description_label.pack(pady=5)
         precautions_label.pack(pady=5)
         medications_label.pack(pady=5)
@@ -146,39 +146,39 @@ def select_image():
 root = tk.Tk()
 root.title("Disease Detection Classifier")
 root.geometry("800x800")
-root.configure(bg="#FFEB3B")
+root.configure(bg="#808080")
 
 # Title
-title_label = tk.Label(root, text="Disease Detection", font=("Arial", 15, "bold"), bg="#FFEB3B", fg="#673AB7")
+title_label = tk.Label(root, text="Disease Detection", font=("Arial", 15, "bold"), bg="#808080", fg="#ffffff")#673AB7
 title_label.pack(pady=20)
 
 # Input Frame
-input_frame = tk.Frame(root, bg="#F0F0F0")
+input_frame = tk.Frame(root, bg="#808080")
 input_frame.pack(pady=20)
-input_label = tk.Label(input_frame, text="Input Image", font=("Arial", 12, "bold"), bg="#F0F0F0", fg="#3F51B5")
+input_label = tk.Label(input_frame, text="Input Image", font=("Arial", 12, "bold"), bg="#808080", fg="#ffffff")#3F51B5
 input_label.pack()
-input_img_label = tk.Label(input_frame, bg="#F0F0F0")
+input_img_label = tk.Label(input_frame, bg="#808080")
 input_img_label.pack()
 
 # Result Frame
-result_frame = tk.Frame(root, bg="#F0F0F0")
+result_frame = tk.Frame(root, bg="#808080")
 result_frame.pack(pady=20)
-result_label = tk.Label(result_frame, text="", font=("Arial", 10), bg="#F0F0F0", fg="#FF5722")
+result_label = tk.Label(result_frame, text="", font=("Arial", 14), bg="#808080", fg="#ffffff")#FF5722
 result_label.pack()
-explanation_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#F0F0F0", fg="#FF5722", justify="left")
+explanation_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#808080", fg="#ffffff", justify="left")
 explanation_label.pack()
-confidence_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#F0F0F0", fg="#FF5722")
+confidence_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#808080", fg="#ffffff")#FF5722
 confidence_label.pack_forget()
 
 # Disease Info Labels
-description_label = tk.Label(root, text="", font=("Arial", 10), bg="#FFEB3B")
-precautions_label = tk.Label(root, text="", font=("Arial", 10), bg="#FFEB3B")
-medications_label = tk.Label(root, text="", font=("Arial", 10), bg="#FFEB3B")
-diet_label = tk.Label(root, text="", font=("Arial", 10), bg="#FFEB3B")
+description_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
+precautions_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
+medications_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
+diet_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
 
 # Select Image Button
 select_button = tk.Button(root, text="Select Image", command=select_image, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), relief="raised", padx=20, pady=10)
-select_button.pack(pady=20)
+select_button.pack(pady=0)
 
 # Run the Tkinter application
 root.mainloop()
