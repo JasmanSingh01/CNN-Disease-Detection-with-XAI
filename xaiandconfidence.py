@@ -1,26 +1,22 @@
 import tkinter as tk
-from tkinter import filedialog, ttk, messagebox
-from keras.models import load_model
+from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk, ImageOps
 import numpy as np
+from keras.models import load_model
 
 # Disable scientific notation for clarity
 np.set_printoptions(suppress=True)
 
-# Load the model
+# Load the model and labels
 try:
     model = load_model("hybrid_model_350.h5", compile=False)
 except Exception as e:
-    messagebox.showerror("Error", f"Failed to load the model. Error: {str(e)}")
+    messagebox.showerror("Error", f"Failed to load model: {str(e)}")
 
-# Load the labels
 class_names = [
-    "Normal",  # 0
-    "Normal No Cardiovascular Disease",  # 1
-    "Bacterial Pneumonia",  # 2
-    "Tuberculosis",  # 3
-    "Viral Pneumonia",  # 4
-    "Cardiovascular Disease Found"  # 5
+    "Normal", "Normal No Cardiovascular Disease", 
+    "Bacterial Pneumonia", "Tuberculosis",
+    "Viral Pneumonia", "Cardiovascular Disease Found"
 ]
 
 # Disease information dictionary
@@ -63,122 +59,152 @@ disease_info = {
     }
 }
 
-# Classify the uploaded image
-def classify_image(image):
-    try:
-        # Resize the image to be at least 224x224 and crop from the center
-        size = (224, 224)
-        image = ImageOps.fit(image, size, Image.LANCZOS)
+# Configure styles
+def configure_styles():
+    style = ttk.Style()
+    style.theme_use('clam')
+    style.configure('Main.TFrame', background='#f0f0f0')
+    style.configure('Title.TLabel', font=('Arial', 16, 'bold'), background='#3F51B5', foreground='white')
+    style.configure('Section.TLabelframe', font=('Arial', 12, 'bold'), relief='groove', borderwidth=2)
+    style.configure('Section.TLabelframe.Label', foreground='#3F51B5')
+    style.configure('Result.TLabel', font=('Arial', 12, 'bold'), foreground='#4CAF50')
+    style.configure('Custom.TButton', font=('Arial', 11, 'bold'), background='#4CAF50', foreground='white')
+    style.map('Custom.TButton', background=[('active', '#45a049')])
 
-        # Convert image to RGB if it is not already in that mode
-        if image.mode != "RGB":
-            image = image.convert("RGB")
+class DiseaseClassifierApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Medical Imaging Diagnosis System")
+        self.root.geometry("1200x900")
+        self.root.configure(bg='#f0f0f0')
+        
+        configure_styles()
+        self.create_widgets()
+        
+    def create_widgets(self):
+        # Main container
+        main_frame = ttk.Frame(self.root, style='Main.TFrame')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
 
-        # Display the input image
-        input_img = ImageTk.PhotoImage(image)
-        input_img_label.config(image=input_img)
-        input_img_label.image = input_img
+        # Title Section
+        title_frame = ttk.Frame(main_frame)
+        title_frame.pack(fill='x', pady=10)
+        
+        ttk.Label(title_frame, text="Medical Imaging Diagnosis System", style='Title.TLabel'
+                 ).pack(side='left', padx=10, ipady=5)
 
-        # Turn the image into a numpy array
-        image_array = np.asarray(image)
+        ttk.Button(title_frame, text="Upload Scan", command=self.select_image, 
+                  style='Custom.TButton').pack(side='right', padx=10)
 
-        # Normalize the image
-        normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
+        # Image and Prediction Section
+        top_frame = ttk.Frame(main_frame)
+        top_frame.pack(fill='x', pady=10)
 
-        # Load the image into the array
-        data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-        data[0] = normalized_image_array
+        # Image Preview
+        self.img_frame = ttk.Labelframe(top_frame, text=" Scan Preview ", style='Section.TLabelframe')
+        self.img_frame.pack(side='left', fill='both', expand=True, padx=5)
+        
+        self.input_img_label = ttk.Label(self.img_frame, background='white')
+        self.input_img_label.pack(padx=10, pady=10)
 
-        # Predict with the model
-        prediction = model.predict(data)
-        index = np.argmax(prediction)
+        # Prediction Results
+        result_frame = ttk.Labelframe(top_frame, text=" Diagnosis Results ", style='Section.TLabelframe')
+        result_frame.pack(side='left', fill='both', expand=True, padx=5)
+        
+        self.result_label = ttk.Label(result_frame, text="Select an image to begin analysis", 
+                                     style='Result.TLabel')
+        self.result_label.pack(pady=5)
+        
+        self.confidence_label = ttk.Label(result_frame, text="", style='Result.TLabel')
+        self.confidence_label.pack(pady=5)
 
-        # Explainable AI: Show probabilities
-        probabilities = prediction[0]
-        explanation = "\n".join([f"{class_names[i]}: {probabilities[i]*100:.2f}%" for i in range(len(class_names))])
+        # Probabilities Table
+        table_frame = ttk.Labelframe(main_frame, text=" Probability Distribution ", style='Section.TLabelframe')
+        table_frame.pack(fill='both', expand=True, padx=5, pady=10)
 
-        # Get the disease name
-        disease_name = class_names[index]
-        confidence_score = probabilities[index]  # Get the confidence score of the predicted class
+        self.tree = ttk.Treeview(table_frame, columns=('Condition', 'Probability'), show='headings', height=6)
+        self.tree.heading('Condition', text='Medical Condition')
+        self.tree.heading('Probability', text='Probability (%)')
+        self.tree.column('Condition', width=400)
+        self.tree.column('Probability', width=200, anchor='center')
+        self.tree.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Update the result label with the predicted class name
-        result_label.config(text=f"Predicted Disease: {disease_name}", fg="#ffffff")
+        # Disease Information Section
+        info_frame = ttk.Frame(main_frame)
+        info_frame.pack(fill='both', expand=True, pady=10)
 
-        # Check if the confidence score is greater than 0.98
-        if confidence_score > 0.98:
-            confidence_label.config(text=f"Confidence Score: {confidence_score:.4f}", fg="#000000")
-            confidence_label.pack()
-            result_label.pack()  # Display the Predicted Class label
-        else:
-            confidence_label.pack_forget()  # Hide the Confidence Score label
-            result_label.pack_forget()  # Hide the Predicted Class label
+        self.create_info_panel(info_frame, "Description", 0)
+        self.create_info_panel(info_frame, "Precautions", 1)
+        self.create_info_panel(info_frame, "Medications", 2)
+        self.create_info_panel(info_frame, "Diet", 3)
 
-        # Display probabilities and disease information
-        explanation_label.config(text=f"Probabilities:\n{explanation}", fg="#000000")
-        show_disease_info(disease_name)
+    def create_info_panel(self, parent, title, column):
+        frame = ttk.Labelframe(parent, text=f" {title} ", style='Section.TLabelframe')
+        frame.grid(row=0, column=column, padx=5, pady=5, sticky='nsew')
+        parent.grid_columnconfigure(column, weight=1)
+        
+        label = ttk.Label(frame, text="No information available", wraplength=250, justify='left')
+        label.pack(fill='both', expand=True, padx=5, pady=5)
+        setattr(self, f"{title.lower()}_label", label)
 
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred during classification: {str(e)}")
+    def select_image(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            image = Image.open(file_path)
+            self.classify_image(image)
 
-# Display detailed disease information
-def show_disease_info(disease_name):
-    info = disease_info.get(disease_name, None)
-    if info:
-        description_label.config(text=f"Description: {info['description']}", fg="#ffffff")
-        precautions_label.config(text=f"Precautions: {info['precautions']}", fg="#ffffff")
-        medications_label.config(text=f"Medications: {info['medications']}", fg="#ffffff")
-        diet_label.config(text=f"Diet: {info['diet']}", fg="#ffffff")
-        description_label.pack(pady=5)
-        precautions_label.pack(pady=5)
-        medications_label.pack(pady=5)
-        diet_label.pack(pady=5)
-    else:
-        messagebox.showerror("Error", "No information available for the detected disease.")
+    def classify_image(self, image):
+        try:
+            # Image preprocessing
+            size = (224, 224)
+            image = ImageOps.fit(image, size, Image.LANCZOS)
+            if image.mode != "RGB": image = image.convert("RGB")
+            
+            # Display image
+            input_img = ImageTk.PhotoImage(image)
+            self.input_img_label.configure(image=input_img)
+            self.input_img_label.image = input_img
 
-# Select an image to classify
-def select_image():
-    file_path = filedialog.askopenfilename()
-    if file_path:
-        image = Image.open(file_path)
-        classify_image(image)
+            # Model prediction
+            image_array = np.asarray(image)
+            normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
+            data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+            data[0] = normalized_image_array
+            prediction = model.predict(data)
+            
+            # Process results
+            index = np.argmax(prediction)
+            probabilities = prediction[0]
+            disease_name = class_names[index]
+            confidence = probabilities[index]
 
-# Create the main window
-root = tk.Tk()
-root.title("Disease Detection Classifier")
-root.geometry("800x800")
-root.configure(bg="#808080")
+            # Update UI components
+            self.update_results(disease_name, confidence)
+            self.update_probabilities(probabilities)
+            self.update_disease_info(disease_name)
 
-# Title
-title_label = tk.Label(root, text="Disease Detection", font=("Arial", 15, "bold"), bg="#808080", fg="#ffffff")#673AB7
-title_label.pack(pady=20)
+        except Exception as e:
+            messagebox.showerror("Error", f"Classification error: {str(e)}")
 
-# Input Frame
-input_frame = tk.Frame(root, bg="#808080")
-input_frame.pack(pady=20)
-input_label = tk.Label(input_frame, text="Input Image", font=("Arial", 12, "bold"), bg="#808080", fg="#ffffff")#3F51B5
-input_label.pack()
-input_img_label = tk.Label(input_frame, bg="#808080")
-input_img_label.pack()
+    def update_results(self, disease, confidence):
+        self.result_label.config(text=f"Primary Diagnosis: {disease}")
+        self.confidence_label.config(text=f"Confidence Level: {confidence*100:.2f}%")
 
-# Result Frame
-result_frame = tk.Frame(root, bg="#808080")
-result_frame.pack(pady=20)
-result_label = tk.Label(result_frame, text="", font=("Arial", 14), bg="#808080", fg="#ffffff")#FF5722
-result_label.pack()
-explanation_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#808080", fg="#ffffff", justify="left")
-explanation_label.pack()
-confidence_label = tk.Label(result_frame, text="", font=("Arial", 12), bg="#808080", fg="#ffffff")#FF5722
-confidence_label.pack_forget()
+    def update_probabilities(self, probabilities):
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+            
+        for i, prob in enumerate(probabilities):
+            self.tree.insert('', 'end', values=(class_names[i], f"{prob*100:.2f}%"))
 
-# Disease Info Labels
-description_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
-precautions_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
-medications_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
-diet_label = tk.Label(root, text="", font=("Arial", 10), bg="#808080")
+    def update_disease_info(self, disease):
+        info = disease_info.get(disease, {})
+        self.description_label.config(text=info.get("description", "Information not available"))
+        self.precautions_label.config(text=info.get("precautions", "Information not available"))
+        self.medications_label.config(text=info.get("medications", "Information not available"))
+        self.diet_label.config(text=info.get("diet", "Information not available"))
 
-# Select Image Button
-select_button = tk.Button(root, text="Select Image", command=select_image, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), relief="raised", padx=20, pady=10)
-select_button.pack(pady=0)
-
-# Run the Tkinter application
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DiseaseClassifierApp(root)
+    root.mainloop()
